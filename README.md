@@ -65,6 +65,11 @@ Every subcommand hangs off the single root command `/cc-my-pi`:
 /cc-my-pi ui|settings|status|outlines|transparent|default|group|detail|branch|diff|theme|spinner|setup
 ```
 
+Thinking visibility follows Pi's native `Ctrl+T` / `hideThinkingBlock` setting.
+Visible thinking stays in the transcript when actions or tool summaries arrive.
+Thinking-bearing messages remain available even while hidden, so toggling thinking
+back on can reveal them; tool grouping never deletes these messages.
+
 ## Screenshots
 
 **Tool rendering** — individual Claude-style call/result rows by default; compact groups remain optional
@@ -125,7 +130,7 @@ same file.
 | Task tracking | Vendored `@tintinweb/pi-tasks` — one persistent static list above the editor using `✓`/`□`; Task tool calls stay hidden from chat and display has no IDs, animation, runtime/token stats or truncation | — (always on) | on | reload |
 | Theme-adaptive palette | Borders, branch connectors, dim text, spinner accent, and diff backgrounds follow the active pi theme | `themeAdaptive` | `true` | live |
 | Grouped tool calls | Opt-in compact activity prose instead of individual Claude-style call/result pairs | `groupToolCalls` | `false` | live |
-| Cross-turn tool groups | Extend groups across sequential hidden thinking-only assistant turns; set false for pre-1.3 same-turn-only grouping | `groupToolCallsAcrossTurns` | `true` | live (future groups) |
+| Cross-turn tool groups | Extend groups across empty/tool-only assistant turns; thinking and text remain boundaries so they can be shown later | `groupToolCallsAcrossTurns` | `true` | live (future groups) |
 | Compact group status dots | Show pre-1.3 green/pending dots before compact groups settle | `showCompactToolStatusDots` | `false` | live |
 | Multiline composer alignment | Every continuation row aligns beneath text after the `❯` prompt | — (always on) | on | — |
 | Live tool preview | Opt-in output tail for still-running calls; off keeps tool rows height-stable | `liveToolPreview` | `false` | live |

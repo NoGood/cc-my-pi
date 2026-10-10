@@ -4,6 +4,8 @@ import { registerHooks } from "node:module";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { AssistantMessageComponent, initTheme } from "@earendil-works/pi-coding-agent";
+import { stripVTControlCharacters } from "node:util";
 
 registerHooks({
 	resolve(specifier, context, nextResolve) {
@@ -20,10 +22,66 @@ registerHooks({
 const {
 	applyThinkingBlockMetadata,
 	hasNonEmptyAssistantTextDelta,
+	isIgnorableToolSeparator,
+	patchAssistantMessages,
 	registerShiftEnterNewlineWrapper,
 	registerThinkingLabels,
 	trackThinkingBlockEvents,
 } = await import("./index.ts");
+
+initTheme("dark");
+patchAssistantMessages();
+
+function thinkingMessage() {
+	return {
+		role: "assistant",
+		content: [
+			{ type: "thinking", thinking: "Persistent reasoning marker" },
+			{ type: "toolCall", id: "read-1", name: "read", arguments: { path: "README.md" } },
+		],
+		stopReason: "toolUse",
+	} as any;
+}
+
+function renderedText(component: AssistantMessageComponent): string {
+	return component.render(120).map(stripVTControlCharacters).join("\n");
+}
+
+test("thinking remains visible through streaming, completion and action text", () => {
+	const message = thinkingMessage();
+	const component = new AssistantMessageComponent(message, false);
+	component.updateContent(message, true);
+	assert.match(renderedText(component), /Persistent reasoning marker/);
+	component.updateContent(message, false);
+	assert.match(renderedText(component), /Persistent reasoning marker/);
+	message.content.push({ type: "text", text: "Next action marker" });
+	component.updateContent(message, false);
+	assert.match(renderedText(component), /Persistent reasoning marker/);
+	assert.match(renderedText(component), /Next action marker/);
+	component.invalidate();
+	assert.match(renderedText(component), /Persistent reasoning marker/);
+});
+
+test("thinking visibility can be hidden and restored without losing content", () => {
+	const component = new AssistantMessageComponent(thinkingMessage(), false);
+	component.setHideThinkingBlock(true);
+	assert.doesNotMatch(renderedText(component), /Persistent reasoning marker/);
+	assert.match(renderedText(component), /Thinking/);
+	component.setHideThinkingBlock(false);
+	assert.match(renderedText(component), /Persistent reasoning marker/);
+});
+
+test("tool grouping never discards thinking-bearing assistant messages", () => {
+	for (const hidden of [false, true]) {
+		const component = new AssistantMessageComponent(thinkingMessage(), hidden);
+		assert.equal(isIgnorableToolSeparator(component), false);
+	}
+	const toolOnly = thinkingMessage();
+	toolOnly.content = toolOnly.content.filter((block: any) => block.type === "toolCall");
+	assert.equal(isIgnorableToolSeparator(new AssistantMessageComponent(toolOnly)), true);
+	toolOnly.content.push({ type: "text", text: "An action boundary" });
+	assert.equal(isIgnorableToolSeparator(new AssistantMessageComponent(toolOnly)), false);
+});
 
 test("recognizes only non-empty v0.84 text deltas", () => {
 	assert.equal(hasNonEmptyAssistantTextDelta({ assistantMessageEvent: { type: "text_delta", delta: "hello" } }), true);
