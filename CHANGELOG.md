@@ -5,6 +5,19 @@
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-10-11
+
+### Fixed
+
+- **Loads under Pi's installer again** — `pi install npm:cc-my-pi` no longer fails with `Cannot find module 'ioredis'` or `Cannot find module 'effect/Deferred'`. The git statusline imports only the Node services layer it uses, and the whole Effect package family is pinned to one version ([#5](https://github.com/timvdhoorn/cc-my-pi/issues/5)).
+- **No crash after reload, fork or session switch** — delayed editor installs no longer touch an invalidated session and can no longer exit the process ([#7](https://github.com/timvdhoorn/cc-my-pi/issues/7)).
+- **Git statusline stops cleanly after subagents** — background polling ends when an embedded session is disposed instead of logging `git-info background task defect` forever ([#3](https://github.com/timvdhoorn/cc-my-pi/issues/3), thanks @BeGild).
+- **Thinking stays visible when tools are grouped** — thinking follows Pi's own `Ctrl+T` / `hideThinkingBlock` setting and is never removed by tool grouping ([#9](https://github.com/timvdhoorn/cc-my-pi/pull/9), thanks @NoGood).
+
+### Changed
+
+- `typebox` is now a host-provided peer dependency; the stale `@sinclair/typebox` peer was removed.
+
 ## [1.4.1] - 2026-08-10
 
 ### Fixed

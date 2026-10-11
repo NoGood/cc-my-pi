@@ -6,16 +6,17 @@ experience to [Pi](https://pi.dev), which works with any model.
 
 > Personal Pi UI bundle — Claude Code-inspired tool rendering, spinner, themes, and esc/queue steering. Fork of [pi-cc-tools](https://github.com/FammasMaz/pi-cc-tools) (npm `pi-claude-code-ui`), heavily adapted. See [Credits & provenance](#credits--provenance).
 
-## What's new in v1.4.1
+## What's new in v1.4.2
 
-- File edits now line up with every other tool row: same left column, same
-  `⎿` arm as bash, read, and MCP calls.
-- An edit's change summary (`+1 -1 at line 10`) is shown once instead of
-  repeating below the diff.
-- The statusline reads calmer: MCP shows as `mcp 18 enabled`, and the memory,
-  MCP, and caveman labels use the same muted gray while their values keep
-  their colors.
-- Upgrade impact: visual only — no settings or commands changed.
+- `pi install npm:cc-my-pi` works again: no more `Cannot find module 'ioredis'`
+  or `effect/Deferred` errors at startup.
+- Reloading, forking or switching sessions can no longer crash Pi.
+- The git statusline stops quietly after a subagent finishes instead of
+  logging errors every few seconds.
+- Thinking follows Pi's own `Ctrl+T` setting: when it is visible it stays
+  visible, also after tool calls are grouped.
+- Upgrade impact: with thinking shown in Pi, you now see thinking text in the
+  transcript again. Press `Ctrl+T` to hide it.
 
 Every module below is **optional and individually toggleable** — turn any of
 them off in settings and the rest keeps working. Core tool rendering (the
@@ -239,7 +240,7 @@ Every continuation row aligns beneath the first row's text, for drafts of any le
 
 #### `groupToolCallsAcrossTurns`
 
-`true` (default) combines parallel calls and sequential calls separated only by hidden thinking:
+`true` (default) combines parallel calls and sequential calls separated only by empty or tool-only assistant turns (thinking and text stay boundaries):
 
 ```text
 Called Skill, Bash 2 times, Read, Ctx Execute 3 times
@@ -364,7 +365,7 @@ not repeated here):
 | `extraExpandedPreviewMaxLines` | `12000` | Max lines after Ctrl+Shift+O extra-detail mode |
 | `extraToolOutputExpanded` | `false` | Start with Ctrl+Shift+O extra-detail mode enabled |
 | `groupToolCalls` | `false` | Opt into compact activity groups instead of individual call/result pairs |
-| `groupToolCallsAcrossTurns` | `true` | Keep grouping across hidden thinking-only assistant turns |
+| `groupToolCallsAcrossTurns` | `true` | Keep grouping across empty/tool-only assistant turns |
 | `showCompactToolStatusDots` | `false` | Show legacy transient dots on pending compact groups |
 | `bashCollapsedLines` | `10` | Lines for collapsed bash output |
 | `liveToolPreview` | `false` | Opt into a temporary output tail while a tool runs |
