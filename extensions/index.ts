@@ -1518,21 +1518,21 @@ function isToolGroupComponent(value: unknown): value is ToolGroupComponent {
 	return value instanceof ToolGroupComponent;
 }
 
-function isIgnorableToolSeparator(value: unknown): boolean {
+export function isIgnorableToolSeparator(value: unknown): boolean {
 	if (value instanceof Spacer) return true;
 	if (value instanceof AssistantMessageComponent) {
 		if (!groupToolCallsAcrossTurnsEnabled()) return false;
 		const message = (value as any).lastMessage;
 		if (Array.isArray(message?.content)) {
-			// Sequential tool calls create a fresh assistant component containing
-			// thinking + toolCall blocks. cc-my-pi hides that thinking chrome, so it
-			// must not split one visual tool group. Actual assistant text remains a
-			// hard boundary and preserves message ordering.
+			// Never splice out thinking-bearing messages, even while hidden:
+			// Ctrl+T or a per-block click must be able to reveal them later.
+			// Only genuinely empty/tool-only messages are disposable separators.
 			return !message.content.some(
 				(block: any) =>
-					block?.type === "text" &&
-					typeof block.text === "string" &&
-					block.text.trim(),
+					(block?.type === "text" &&
+						typeof block.text === "string" && block.text.trim()) ||
+					(block?.type === "thinking" &&
+						typeof block.thinking === "string" && block.thinking.trim()),
 			);
 		}
 		const contentChildren = (value as any).contentContainer?.children;
@@ -3535,7 +3535,7 @@ function registerPromptGlyphWrapper(pi: ExtensionAPI): void {
 	pi.on("agent_start", (_event, ctx) => installLate(ctx));
 }
 
-function patchAssistantMessages(): void {
+export function patchAssistantMessages(): void {
 	const proto = AssistantMessageComponent.prototype as any;
 	if (proto[ASSISTANT_PATCH_FLAG]) return;
 	const originalRender = proto.render;
@@ -3562,7 +3562,7 @@ function patchAssistantMessages(): void {
 		proto[ASSISTANT_RENDER_PATCH_FLAG] = true;
 	}
 	const originalUpdateContent = proto.updateContent;
-	proto.updateContent = function patchedUpdateContent(message: any) {
+	proto.updateContent = function patchedUpdateContent(message: any, isStreaming?: boolean) {
 		// Content changed (also reached via invalidate() → updateContent): drop the
 		// cached rendered output so the next render rebuilds with the new children.
 		clearMessageRenderCache(this);
@@ -3570,20 +3570,14 @@ function patchAssistantMessages(): void {
 			(this as any)[WORKED_START_KEY] = Date.now();
 		}
 		if (!message || !Array.isArray(message.content)) {
-			return originalUpdateContent.call(this, message);
+			return originalUpdateContent.call(this, message, isStreaming);
 		}
-		if ((this as any).hideThinkingBlock && messageHasThinkingContent(message)) {
-			// Pi wraps this in theme.italic/fg again — keep plain label for the placeholder pass.
-			(this as any).hiddenThinkingLabel = "Thinking…";
-		}
+		// Let Pi own thinking visibility, placeholders and per-block mouse toggles.
 		// Call original to build all children (text, thinking, spacers, errors)
-		originalUpdateContent.call(this, message);
+		originalUpdateContent.call(this, message, isStreaming);
 		// Replace text-block Markdown children with DottedParagraph wrappers
 		const container = (this as any).contentContainer;
 		if (!container?.children) return;
-		if ((this as any).hideThinkingBlock && messageHasThinkingContent(message)) {
-			replaceHiddenThinkingPlaceholders(container, message);
-		}
 		const mdTheme = (this as any).markdownTheme;
 		for (let i = container.children.length - 1; i >= 0; i--) {
 			const child = container.children[i];
@@ -3591,10 +3585,9 @@ function patchAssistantMessages(): void {
 				const text = (child as any).text;
 				if (!text) continue;
 				const isThinking = !!(child as any).defaultTextStyle?.italic;
-				if (isThinking) {
-					const style = (child as any).defaultTextStyle;
-					container.children[i] = new ThinkingParagraph(text, mdTheme, style);
-				} else {
+				// Older Pi versions use direct Markdown children; newer versions
+				// wrap thinking in MouseRegion. Preserve both native forms unchanged.
+				if (!isThinking) {
 					container.children[i] = new DottedParagraph(text, mdTheme);
 				}
 			}
